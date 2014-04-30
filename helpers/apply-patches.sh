@@ -13,16 +13,13 @@ apply_patch() {
         ${HOOK_DIR}/before "${PATCH_PATH}" "${PATCH_FILE_NAME}" || return 0
     fi
     echo Attempt to apply patch $START_DIR/$PATCH_PATH/$PATCH_FILE_NAME
-    cd $START_DIR/$SOURCE_DIR
-    patch -p1 -l < $START_DIR/$PATCH_PATH/$PATCH_FILE_NAME
+    patch -p1 -F3 --ignore-whitespace -d $SOURCE_DIR < $START_DIR/$PATCH_PATH/$PATCH_FILE_NAME
     PATCH_RESULT=$?
     echo patch result is $PATCH_RESULT
     if [  ${PATCH_RESULT} != 0 ]; then
         echo Applying $PATCH_FILE_NAME failed. Patch returned ${PATCH_RESULT}
-        cd ..
         return 1
     fi
-    cd $START_DIR
 
     if [ -f ${HOOK_DIR}/after ]; then
         ${HOOK_DIR}/after "${PATCH_PATH}" "${PATCH_FILE_NAME}" || return 1
