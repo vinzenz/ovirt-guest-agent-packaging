@@ -1,0 +1,32 @@
+From a0ee5679aff2a122b98c264ba41072c19e5836de Mon Sep 17 00:00:00 2001
+From: Vinzenz Feenstra <vfeenstr@redhat.com>
+Date: Thu, 10 Apr 2014 13:45:38 +0200
+Subject: [PATCH 07/14] List of SUSE packages
+
+Change-Id: I209a8f466ffb6152d2f9f43e8651df9e5d01413e
+Bug-Url: https://bugzilla.redhat.com/1043471
+Signed-off-by: Vinzenz Feenstra <vfeenstr@redhat.com>
+---
+ ovirt-guest-agent/ovirt-guest-agent.conf |    4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/ovirt-guest-agent/ovirt-guest-agent.conf b/ovirt-guest-agent/ovirt-guest-agent.conf
+index e40036f..b1be8f4 100644
+--- a/ovirt-guest-agent/ovirt-guest-agent.conf
++++ b/ovirt-guest-agent/ovirt-guest-agent.conf
+@@ -9,9 +9,11 @@ report_user_rate = 10
+ report_num_cpu_rate = 60
+ report_application_rate = 120
+ report_disk_usage = 300
++# Generic:              ovirt-guest-agent
+ # RHEL/Fedora Packages: kernel ovirt-guest-agent-common xorg-x11-drv-qxl
+ # Debian Packages:      linux-image xserver-xorg-video-qxl
+-applications_list = kernel ovirt-guest-agent-common xorg-x11-drv-qxl linux-image xserver-xorg-video-qxl
++# openSUSE Packages:    xf86-video-qxl kernel-desktop kernel-default kernel-trace kernel-vanilla kernel-debug kernel-ec2 kernel-xen
++applications_list = kernel ovirt-guest-agent ovirt-guest-agent-common xorg-x11-drv-qxl linux-image xserver-xorg-video-qxl xf86-video-qxl kernel-desktop kernel-default kernel-trace kernel-vanilla kernel-debug kernel-ec2 kernel-xen
+ ignored_fs = rootfs tmpfs autofs cgroup selinuxfs udev mqueue nfsd proc sysfs devtmpfs hugetlbfs rpc_pipefs devpts securityfs debugfs binfmt_misc fuse.gvfsd-fuse fuse.gvfs-fuse-daemon fusectl usbfs
+ 
+ [virtio]
+-- 
+1.7.10.4
+

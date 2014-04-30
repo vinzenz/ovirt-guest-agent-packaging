@@ -1,0 +1,199 @@
+From 1367a3436b66010a05542342ab5e8966a6e85f67 Mon Sep 17 00:00:00 2001
+From: Vinzenz Feenstra <vfeenstr@redhat.com>
+Date: Mon, 7 Apr 2014 11:12:41 +0200
+Subject: [PATCH 03/14] agent: Report number of CPU cores visible online on
+ the guest OS
+
+This patches a new message and increases the Guest Agent API to
+version 1.
+
+The new message has this format:
+{"__name__": "number-of-cpus", "count": <int>}
+
+The reported number 'count' is the number of visible online CPU cores
+on the guest OS system.
+
+Change-Id: Ief777608519a35319665c4cd0f580b7b38305b3e
+Guest-Agent-API-Version: 1
+Bug-URL: https://bugzilla.redhat.com/show_bug.cgi?id=1063280
+Signed-off-by: Vinzenz Feenstra <vfeenstr@redhat.com>
+---
+ ovirt-guest-agent/OVirtAgentLogic.py     |   33 +++++++++++++++++++++++++++++-
+ ovirt-guest-agent/ovirt-guest-agent.conf |    1 +
+ ovirt-guest-agent/ovirt-guest-agent.ini  |    1 +
+ tests/guest_agent_test.py                |    4 ++++
+ tests/message_validator.py               |   16 +++++++++++++++
+ 5 files changed, 54 insertions(+), 1 deletion(-)
+
+diff --git a/ovirt-guest-agent/OVirtAgentLogic.py b/ovirt-guest-agent/OVirtAgentLogic.py
+index 1c8fb30..5369180 100644
+--- a/ovirt-guest-agent/OVirtAgentLogic.py
++++ b/ovirt-guest-agent/OVirtAgentLogic.py
+@@ -21,10 +21,21 @@ import time
+ import logging
+ import struct
+ import socket
++
++multiproc = None
++try:
++    import multiprocessing
++    multiproc = multiprocessing
++except ImportError:
++    class MultiProcessingFake:
++        def cpu_count(self):
++            return -1
++    multiproc = MultiProcessingFake()
++
+ from threading import Event
+ from VirtIoChannel import VirtIoChannel
+ 
+-_MAX_SUPPORTED_API_VERSION = 0
++_MAX_SUPPORTED_API_VERSION = 1
+ _DISABLED_API_VALUE = 0
+ 
+ _MESSAGE_MIN_API_VERSION = {
+@@ -37,6 +48,7 @@ _MESSAGE_MIN_API_VERSION = {
+     'host-name': 0,
+     'memory-stats': 0,
+     'network-interfaces': 0,
++    'number-of-cpus': 1,
+     'os-version': 0,
+     'session-lock': 0,
+     'session-logoff': 0,
+@@ -130,6 +142,16 @@ class DataRetriverBase:
+     def getFQDN(self):
+         return socket.getfqdn()
+ 
++    def getNumberOfCPUs(self):
++        """
++        Reports the number of CPUs or -1 if this was not implemented for the
++        current OS/Platform
++        """
++        try:
++            return multiproc.cpu_count()
++        except NotImplementedError:
++            return -1
++
+ 
+ class AgentLogicBase:
+ 
+@@ -141,6 +163,7 @@ class AgentLogicBase:
+         self.appRefreshRate = config.getint("general",
+                                             "report_application_rate")
+         self.disksRefreshRate = config.getint("general", "report_disk_usage")
++        self.numCPUsCheckRate = config.getint("general", "report_num_cpu_rate")
+         self.activeUser = ""
+         self.vio = VirtIoChannel(config.get("virtio", "device"))
+         self.dr = None
+@@ -184,6 +207,7 @@ class AgentLogicBase:
+         appsecs = self.appRefreshRate
+         disksecs = self.disksRefreshRate
+         usersecs = self.userCheckRate
++        numcpusecs = self.numCPUsCheckRate
+ 
+         try:
+             while not self.wait_stop.isSet():
+@@ -208,6 +232,10 @@ class AgentLogicBase:
+                 if disksecs <= 0:
+                     self.sendDisksUsages()
+                     disksecs = self.disksRefreshRate
++                numcpusecs -= 1
++                if numcpusecs <= 0:
++                    self.sendNumberOfCPUs()
++                    numcpusecs = self.numCPUsCheckRate
+                 time.sleep(1)
+             logging.debug("AgentLogicBase:: doWork() exiting")
+         except:
+@@ -317,6 +345,9 @@ class AgentLogicBase:
+     def sendMemoryStats(self):
+         self._send('memory-stats', {'memory': self.dr.getMemoryStats()})
+ 
++    def sendNumberOfCPUs(self):
++        self._send('number-of-cpus', {'count': self.dr.getNumberOfCPUs()})
++
+     def sessionLogon(self):
+         logging.debug("AgentLogicBase::sessionLogon: user logs on the system.")
+         cur_user = self.dr.getActiveUser()
+diff --git a/ovirt-guest-agent/ovirt-guest-agent.conf b/ovirt-guest-agent/ovirt-guest-agent.conf
+index ee541ae..e40036f 100644
+--- a/ovirt-guest-agent/ovirt-guest-agent.conf
++++ b/ovirt-guest-agent/ovirt-guest-agent.conf
+@@ -6,6 +6,7 @@
+ 
+ heart_beat_rate = 5
+ report_user_rate = 10
++report_num_cpu_rate = 60
+ report_application_rate = 120
+ report_disk_usage = 300
+ # RHEL/Fedora Packages: kernel ovirt-guest-agent-common xorg-x11-drv-qxl
+diff --git a/ovirt-guest-agent/ovirt-guest-agent.ini b/ovirt-guest-agent/ovirt-guest-agent.ini
+index 64d9ed5..ea517c5 100644
+--- a/ovirt-guest-agent/ovirt-guest-agent.ini
++++ b/ovirt-guest-agent/ovirt-guest-agent.ini
+@@ -6,6 +6,7 @@
+ 
+ heart_beat_rate = 5
+ report_user_rate = 10
++report_num_cpu_rate = 60
+ report_application_rate = 120
+ report_disk_usage = 300
+ 
+diff --git a/tests/guest_agent_test.py b/tests/guest_agent_test.py
+index bd4a7f4..1962e19 100644
+--- a/tests/guest_agent_test.py
++++ b/tests/guest_agent_test.py
+@@ -50,6 +50,7 @@ class FunctionalTest(GuestAgentTestCase):
+ 
+         self._config.set('general', 'heart_beat_rate', '5')
+         self._config.set('general', 'report_user_rate', '10')
++        self._config.set('general', 'report_num_cpu_rate', '60')
+         self._config.set('general', 'report_application_rate', '120')
+         self._config.set('general', 'report_disk_usage', '300')
+         self._config.set('virtio', 'device', self._vport_name)
+@@ -78,6 +79,9 @@ class FunctionalTest(GuestAgentTestCase):
+     def testSendUserInfo(self):
+         self._validator.verifySendUserInfo(self.vdsAgent)
+ 
++    def testSendNumberOfCPUs(self):
++        self._validator.verifySendNumberOfCPUs(self.vdsAgent)
++
+     def testSessionLogon(self):
+         self._validator.verifySessionLogon(self.vdsAgent)
+ 
+diff --git a/tests/message_validator.py b/tests/message_validator.py
+index 20954b9..703c453 100644
+--- a/tests/message_validator.py
++++ b/tests/message_validator.py
+@@ -155,6 +155,7 @@ _MSG_VALIDATORS = {
+     'host-name': _name_and_one_str_param('host-name', 'name'),
+     'memory-stats': validate_memory_stats,
+     'network-interfaces': validate_network_interfaces,
++    'number-of-cpus': _name_and_one_integral_param('number-of-cpus', 'count'),
+     'os-version': _name_and_one_str_param('os-version', 'version'),
+     'session-lock': _name_only('session-lock'),
+     'session-logoff': _name_only('session-logoff'),
+@@ -206,6 +207,21 @@ class MessageValidator(object):
+     def verifySendMemoryStats(self, agent):
+         agent.sendMemoryStats()
+ 
++    def verifySendNumberOfCPUs(self, agent):
++        self._verifySendNumberOfCPUsV0(agent)
++        self._verifySendNumberOfCPUsV1(agent)
++
++    @_ensure_messages()
++    def _verifySendNumberOfCPUsV0(self, agent):
++        agent.dr.apiVersion = 0
++        agent.sendNumberOfCPUs()
++
++    @_ensure_messages('number-of-cpus')
++    def _verifySendNumberOfCPUsV1(self, agent):
++        agent.dr.apiVersion = 1
++        agent.sendNumberOfCPUs()
++        agent.dr.apiVersion = 0
++
+     @_ensure_messages('active-user')
+     def verifySendUserInfo(self, agent):
+         agent.sendUserInfo()
+-- 
+1.7.10.4
+
