@@ -19,3 +19,6 @@ override_dh_auto_configure:
 
 override_dh_installudev:
 		dh_installudev --priority 55
+
+override_dh_auto_test:
+		echo "Skipping unit tests"
