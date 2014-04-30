@@ -12,3 +12,9 @@ cp *.patch ../../patches
 cd ../..
 /bin/rm -rf repo
 
+if [ -f ./blacklist/${LATEST_VERSION} ]; then
+    echo "Removing black listed patches"
+    cd patches
+    /bin/rm "`cat ../blacklist/${LATEST_VERSION}`"
+    cd ..
+fi
