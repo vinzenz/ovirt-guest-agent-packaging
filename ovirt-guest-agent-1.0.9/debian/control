@@ -22,7 +22,7 @@ Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends},
     python-apt,
     python-dbus,
     python-ethtool,
-    usermode
+    sudo
 Description: oVirt Guest Agent
  This is the oVirt management agent running inside the guest. The agent
  interfaces with the oVirt manager, supplying heart-beat info as well as
