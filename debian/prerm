@@ -18,10 +18,14 @@ set -e
 
 
 case "$1" in
-    remove|upgrade|deconfigure|purge)
+    upgrade)
+    ;;
+    remove|deconfigure|purge)
+        OVIRT_SERVICE=/etc/init.d/ovirt-guest-agent
+        [ -x $OVIRT_SERVICE ] && $OVIRT_SERVICE stop
         VIRTIO=`grep "^device" /etc/ovirt-guest-agent.conf | awk '{ print $3; }'`
         if [ -w $VIRTIO ]; then
-            printf '{"__name__": "uninstalled"}\n' | dd of=$VIRTIO oflag=nonblock status=noxfer conv=nocreat 1>&2 /dev/null || :
+            printf '{"__name__": "uninstalled"}\n' | dd of=$VIRTIO oflag=nonblock status=noxfer conv=nocreat 2> /dev/null || :
         fi
     ;;
 

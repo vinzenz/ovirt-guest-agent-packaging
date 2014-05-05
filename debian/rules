@@ -14,6 +14,10 @@ export DH_OPTIONS
 %:
 	dh $@  --with autotools-dev --with python2
 
+override_dh_auto_install:
+		dh_auto_install
+		/bin/chmod a+x $(CURDIR)/debian/ovirt-guest-agent/usr/share/ovirt-guest-agent/ovirt-guest-agent.py
+
 override_dh_auto_configure:
 		dh_auto_configure -- --without-sso --with-sudohelper=sudo
 
