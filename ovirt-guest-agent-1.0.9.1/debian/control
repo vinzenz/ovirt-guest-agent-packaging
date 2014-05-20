@@ -19,6 +19,7 @@ Homepage: http://www.ovirt.org/Ovirt_guest_agent
 Package: ovirt-guest-agent
 Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends},
+    linux-generic,
     python-apt,
     python-dbus,
     python-ethtool,
