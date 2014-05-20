@@ -7,7 +7,6 @@ Build-Depends: debhelper (>= 7.0.50),
     automake,
     autoconf,
     libtool,
-    pep8,
     pkg-config,
     python,
     python-nose
