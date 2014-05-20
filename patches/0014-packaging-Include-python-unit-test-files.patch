@@ -1,0 +1,31 @@
+From 1431b7a5c07b98a586fb3376dfe22d02f5a51782 Mon Sep 17 00:00:00 2001
+From: Vinzenz Feenstra <vfeenstr@redhat.com>
+Date: Fri, 25 Apr 2014 11:45:30 +0200
+Subject: [PATCH 14/14] packaging: Include python unit test files
+
+Change-Id: I65b246a05192d5898e2e122b8c90cf1a7160b50b
+Signed-off-by: Vinzenz Feenstra <vfeenstr@redhat.com>
+---
+ tests/Makefile.am |    9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index 55fb55a..bf0af9d 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -7,3 +7,12 @@ TESTS=\
+     guest_agent_test.py \
+     $(NULL)
+ 
++EXTRA_DIST=                 \
++    encoding_test.py        \
++    guest_agent_test.py     \
++    message_validator.py    \
++    test_port.py            \
++    testrunner.py           \
++    unittest.bat            \
++    $(NULL)
++
+-- 
+1.7.10.4
+

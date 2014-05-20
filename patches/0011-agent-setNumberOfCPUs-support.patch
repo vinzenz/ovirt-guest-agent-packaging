@@ -1,0 +1,60 @@
+From 9e608c41bb7789fc20d6cbc6068caec52336d0ae Mon Sep 17 00:00:00 2001
+From: Vinzenz Feenstra <vfeenstr@redhat.com>
+Date: Mon, 7 Apr 2014 16:13:01 +0200
+Subject: [PATCH 11/14] agent: setNumberOfCPUs support
+
+Change-Id: I0b03bd96bd52b76e7d3bf1f8bbcdd7d8e8fbc560
+Signed-off-by: Vinzenz Feenstra <vfeenstr@redhat.com>
+---
+ ovirt-guest-agent/GuestAgentLinux2.py |    3 +++
+ ovirt-guest-agent/GuestAgentWin32.py  |    3 +++
+ ovirt-guest-agent/OVirtAgentLogic.py  |    5 +++++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/ovirt-guest-agent/GuestAgentLinux2.py b/ovirt-guest-agent/GuestAgentLinux2.py
+index dec6676..6b4aeac 100644
+--- a/ovirt-guest-agent/GuestAgentLinux2.py
++++ b/ovirt-guest-agent/GuestAgentLinux2.py
+@@ -183,6 +183,9 @@ class CommandHandlerLinux:
+         logging.debug("Executing hibernate command: %s", cmd)
+         subprocess.call(cmd)
+ 
++    def set_number_of_cpus(self, count):
++        pass  # currently noop
++
+ 
+ class LinuxDataRetriver(DataRetriverBase):
+ 
+diff --git a/ovirt-guest-agent/GuestAgentWin32.py b/ovirt-guest-agent/GuestAgentWin32.py
+index a1b87a8..0acf78b 100644
+--- a/ovirt-guest-agent/GuestAgentWin32.py
++++ b/ovirt-guest-agent/GuestAgentWin32.py
+@@ -300,6 +300,9 @@ class CommandHandlerWin:
+         except:
+             logging.exception("LockWorkStation exception")
+ 
++    def setNumberOfCPUs(self, count):
++        pass
++
+ 
+ class WinDataRetriver(DataRetriverBase):
+     def __init__(self):
+diff --git a/ovirt-guest-agent/OVirtAgentLogic.py b/ovirt-guest-agent/OVirtAgentLogic.py
+index 5369180..126b0db 100644
+--- a/ovirt-guest-agent/OVirtAgentLogic.py
++++ b/ovirt-guest-agent/OVirtAgentLogic.py
+@@ -315,6 +315,11 @@ class AgentLogicBase:
+         elif command == 'hibernate':
+             state = args.get('state', 'disk')
+             self.commandHandler.hibernate(state)
++        elif command == 'set-number-of-cpus':
++            count = args.get('count', 0)
++            if count > 0:
++                self.commandHandler.set_number_of_cpus(count)
++                self.sendNumberOfCPUs()
+         else:
+             logging.error("Unknown external command: %s (%s)"
+                           % (command, args))
+-- 
+1.7.10.4
+

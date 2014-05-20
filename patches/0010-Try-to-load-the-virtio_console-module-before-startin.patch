@@ -1,0 +1,27 @@
+From 01939815964c4bcb976702faa5da9d68cdc3f051 Mon Sep 17 00:00:00 2001
+From: Vinzenz Feenstra <vfeenstr@redhat.com>
+Date: Tue, 29 Apr 2014 11:33:09 +0200
+Subject: [PATCH 10/14] Try to load the virtio_console module before starting
+
+Change-Id: I124bf87f940dae09cb237439e213326a8747938a
+Bug-Url: https://bugzilla.redhat.com/1061139
+Signed-off-by: Vinzenz Feenstra <vfeenstr@redhat.com>
+---
+ ovirt-guest-agent/ovirt-guest-agent.service |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ovirt-guest-agent/ovirt-guest-agent.service b/ovirt-guest-agent/ovirt-guest-agent.service
+index e0bd83d..a0c896a 100644
+--- a/ovirt-guest-agent/ovirt-guest-agent.service
++++ b/ovirt-guest-agent/ovirt-guest-agent.service
+@@ -7,6 +7,7 @@ PIDFile=/run/ovirt-guest-agent.pid
+ EnvironmentFile=-/etc/sysconfig/ovirt-guest-agent
+ User=ovirtagent
+ PermissionsStartOnly=true
++ExecStartPre=/sbin/modprobe virtio_console
+ ExecStartPre=/bin/touch /run/ovirt-guest-agent.pid
+ ExecStartPre=/bin/chown ovirtagent:ovirtagent /run/ovirt-guest-agent.pid
+ ExecStart=/usr/bin/python /usr/share/ovirt-guest-agent/ovirt-guest-agent.py
+-- 
+1.7.10.4
+
