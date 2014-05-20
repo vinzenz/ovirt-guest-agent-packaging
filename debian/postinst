@@ -23,7 +23,7 @@ case "$1" in
         udevadm control --reload-rules
         udevadm trigger --subsystem-match="virtio-ports" --attr-match="name=com.redhat.rhevm.vdsm"
         udevadm settle
-        /bin/chown ovirtagent:ovirtagent /var/log/ovirt-guest-agent
+        chown ovirtagent:ovirtagent /var/log/ovirt-guest-agent || :
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
