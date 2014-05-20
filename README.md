@@ -19,8 +19,6 @@ Each target has their own branch each distro/flavour their own branch
 ### Ubuntu
 * ubuntu/14.04
 * ubuntu/13.10
-* ubuntu/13.04
-* ubuntu/12.10
 * ubuntu/12.04
 * ubuntu/10.04
 
