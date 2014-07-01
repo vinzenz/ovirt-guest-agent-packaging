@@ -59,8 +59,8 @@ make %{?_smp_mflags}
 make install DESTDIR=%{buildroot}
 install -d 644 %{buildroot}%{_unitdir}
 install -m 644 ovirt-guest-agent/ovirt-guest-agent.service %{buildroot}%{_unitdir}/ovirt-guest-agent.service
-install -d -m 755 -p %{buildroot}/lib/udev/rules.d
-/bin/mv %{buildroot}/%{_sysconfdir}/udev/rules.d/55-ovirt-guest-agent.rules %{buildroot}/lib/udev/rules.d/55-ovirt-guest-agent.rules
+install -d -m 755 -p %{buildroot}/usr/lib/udev/rules.d
+/bin/mv %{buildroot}/%{_sysconfdir}/udev/rules.d/55-ovirt-guest-agent.rules %{buildroot}/usr/lib/udev/rules.d/55-ovirt-guest-agent.rules
 %fdupes %{buildroot}%{_datadir}/ovirt-guest-agent
 
 %pre common
@@ -117,17 +117,18 @@ exit 0
 
 %dir %attr (755,ovirtagent,ovirtagent) %{_localstatedir}/log/ovirt-guest-agent
 %dir %attr (755,root,root) %{_datadir}/ovirt-guest-agent
+%dir %attr (750,root,root) %{_sysconfdir}/sudoers.d
 
 %config(noreplace) %{_sysconfdir}/ovirt-guest-agent.conf
 %config(noreplace) %attr (440,root,root) %{_sysconfdir}/sudoers.d/50_ovirt-guest-agent
-%attr (644,root,root) /lib/udev/rules.d/55-ovirt-guest-agent.rules
+%attr (644,root,root) /usr/lib/udev/rules.d/55-ovirt-guest-agent.rules
 
 %doc AUTHORS COPYING NEWS README
 
-%attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-guest-agent.py*
 %{_datadir}/ovirt-guest-agent/default.conf
 %{_datadir}/ovirt-guest-agent/default-logger.conf
 
+%attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-guest-agent.py*
 %{_datadir}/ovirt-guest-agent/OVirtAgentLogic.py*
 %{_datadir}/ovirt-guest-agent/VirtIoChannel.py*
 %{_datadir}/ovirt-guest-agent/GuestAgentLinux2.py*
@@ -155,6 +156,9 @@ exit 0
 %changelog
 * Tue Jul 01 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.10-1
 - Update to upstream 1.0.10 version
+
+* Wed Jun 18 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.9-2
+- sudoers: fix path to ovirt-shutdown-wrappers.sh
 
 * Thu Apr 10 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.9-1
 - Update to upstream 1.0.9 version
