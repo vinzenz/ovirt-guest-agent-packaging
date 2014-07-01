@@ -1,7 +1,0 @@
-
-LIBRARY OVirtCredProv.DLL
-
-EXPORTS
-
-    DllCanUnloadNow                                 PRIVATE
-    DllGetClassObject                               PRIVATE
