@@ -12,23 +12,20 @@ Source0: http://evilissimo.fedorapeople.org/releases/ovirt-guest-agent/%{version
 
 BuildRequires: libtool
 BuildRequires: python-devel
+BuildRequires: systemd
 BuildRequires: fdupes
 BuildRequires: pkg-config
-BuildRequires: udev
-BuildRequires: pwdutils
 BuildRequires: sudo
-BuildRoot: %{_tmppath}/%{name}-%{version}-build
 Requires: %{name}-common = %{version}-%{release}
 
 %package common
 Summary: Commonly used files of the oVirt Guest Agent
-Group: System/Monitoring
 BuildArch: noarch
-Requires: pwdutils
-Requires: udev
+BuildRequires: python-pep8
+Requires: sudo
 Requires: rpm-python
 Requires: python-ethtool >= 0.4-1
-Requires: sudo
+Requires: udev >= 095-14.23
 Provides: %{name} = %{version}-%{release}
 
 %description
@@ -49,26 +46,21 @@ restart).
 %setup -q -n ovirt-guest-agent-%{version}
 
 %build
+
 autoreconf -ivf
 
-%configure --without-sso --with-sudohelper=sudo
-
-sed  "s/\/run\/ovirt-guest-agent.pid/\/var\/run\/ovirt-guest-agent.pid/" -i ovirt-guest-agent/ovirt-guest-agent.py
+%configure \
+    --with-sudohelper=sudo \
+    --without-sso 
 
 make %{?_smp_mflags}
 
 %install
 make install DESTDIR=%{buildroot}
-
-install -d -p -m 755 %{buildroot}%{_initrddir}
-install -D -m 755 ovirt-guest-agent/ovirt-guest-agent.sles %{buildroot}%{_initrddir}/ovirt-guest-agent
-
-mkdir -p %{buildroot}%{_sbindir}
-ln -sf %{_initrddir}/ovirt-guest-agent %{buildroot}%{_sbindir}/rcovirt-guest-agent
-
+install -d 644 %{buildroot}%{_unitdir}
+install -m 644 ovirt-guest-agent/ovirt-guest-agent.service %{buildroot}%{_unitdir}/ovirt-guest-agent.service
 install -d -m 755 -p %{buildroot}/lib/udev/rules.d
 /bin/mv %{buildroot}/%{_sysconfdir}/udev/rules.d/55-ovirt-guest-agent.rules %{buildroot}/lib/udev/rules.d/55-ovirt-guest-agent.rules
-
 %fdupes %{buildroot}%{_datadir}/ovirt-guest-agent
 
 %pre common
@@ -79,21 +71,22 @@ getent group ovirtagent >/dev/null || groupadd -r -g 175 ovirtagent
 getent passwd ovirtagent > /dev/null || \
     /usr/sbin/useradd -u 175 -g 175 -o -r ovirtagent \
     -c "oVirt Guest Agent" -d %{_datadir}/ovirt-guest-agent -s /sbin/nologin
+%service_add_pre ovirt-guest-agent.service
 exit 0
 
 %post common
 /sbin/udevadm trigger --subsystem-match="virtio-ports" \
     --attr-match="name=com.redhat.rhevm.vdsm"
 
-%fillup_and_insserv ovirt-guest-agent
-
+%service_add_post ovirt-guest-agent.service
 exit 0
 
 %preun common
-%stop_on_removal ovirt-guest-agent
-
 if [ "$1" -eq 0 ]
 then
+    %service_del_preun ovirt-guest-agent.service
+    # /bin/systemctl stop ovirt-guest-agent.service > /dev/null 2>&1
+
     # Send an "uninstalled" notification to vdsm.
     VIRTIO=`grep "^device" %{_sysconfdir}/ovirt-guest-agent.conf | awk '{ print $3; }'`
     if [ -w $VIRTIO ]
@@ -106,45 +99,45 @@ fi
 exit 0
 
 %postun common
-%restart_on_update ovirt-guest-agent
-%insserv_cleanup
 if [ "$1" -eq 0 ]
 then
+    %service_del_postun ovirt-guest-agent.service
     # Let udev clear access rights
     /sbin/udevadm trigger --subsystem-match="virtio-ports" \
         --attr-match="name=com.redhat.rhevm.vdsm"
 fi
 
-# if [ "$1" -ge 1 ]; then
-#     /bin/systemctl try-restart ovirt-guest-agent.service >/dev/null 2>&1 || :
-# fi
+if [ "$1" -ge 1 ]; then
+    /bin/systemctl try-restart ovirt-guest-agent.service >/dev/null 2>&1 || :
+fi
 exit 0
 
 %files common
-%defattr(-,root,root)
+%defattr(644,root,root,644)
+
 %dir %attr (755,ovirtagent,ovirtagent) %{_localstatedir}/log/ovirt-guest-agent
 %dir %attr (755,root,root) %{_datadir}/ovirt-guest-agent
-%dir %attr (750,root,root) %{_sysconfdir}/sudoers.d
 
-%config(noreplace) %attr (644,root,root) %{_sysconfdir}/ovirt-guest-agent.conf
+%config(noreplace) %{_sysconfdir}/ovirt-guest-agent.conf
 %config(noreplace) %attr (440,root,root) %{_sysconfdir}/sudoers.d/50_ovirt-guest-agent
-
 %attr (644,root,root) /lib/udev/rules.d/55-ovirt-guest-agent.rules
 
 %doc AUTHORS COPYING NEWS README
-%attr (755,root,root) %{_initrddir}/ovirt-guest-agent
-%{_sbindir}/rcovirt-guest-agent
-
-%attr (644,root,root) %{_datadir}/ovirt-guest-agent/default.conf
-%attr (644,root,root) %{_datadir}/ovirt-guest-agent/default-logger.conf
 
 %attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-guest-agent.py*
-%attr (644,root,root) %{_datadir}/ovirt-guest-agent/OVirtAgentLogic.py*
-%attr (644,root,root) %{_datadir}/ovirt-guest-agent/VirtIoChannel.py*
-%attr (644,root,root) %{_datadir}/ovirt-guest-agent/GuestAgentLinux2.py*
-%attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-locksession
-%attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-shutdown
-%attr (755,root,root) %{_datadir}/ovirt-guest-agent/ovirt-hibernate
+%{_datadir}/ovirt-guest-agent/default.conf
+%{_datadir}/ovirt-guest-agent/default-logger.conf
+
+%{_datadir}/ovirt-guest-agent/OVirtAgentLogic.py*
+%{_datadir}/ovirt-guest-agent/VirtIoChannel.py*
+%{_datadir}/ovirt-guest-agent/GuestAgentLinux2.py*
+%{_datadir}/ovirt-guest-agent/ovirt-locksession
+%{_datadir}/ovirt-guest-agent/ovirt-shutdown
+%{_datadir}/ovirt-guest-agent/ovirt-hibernate
+
+# We don't provide single-sign-on support on this distribution
+%exclude %{_datadir}/ovirt-guest-agent/CredServer.py*
+%exclude %{_sysconfdir}/dbus-1/system.d/org.ovirt.vdsm.Credentials.conf
 
 # SUDO support script
 %attr (755, root, root) %{_datadir}/ovirt-guest-agent/ovirt-hibernate-wrapper.sh
@@ -156,22 +149,15 @@ exit 0
 %attr (755,root,root) %{_datadir}/ovirt-guest-agent/LockActiveSession.py*
 %attr (755,root,root) %{_datadir}/ovirt-guest-agent/hibernate
 
-# We don't provide single-sign-on support on this distribution
-%exclude %{_sysconfdir}/dbus-1/system.d/org.ovirt.vdsm.Credentials.conf
-# We don't provide single-sign-on support on this distribution
-%exclude %{_datadir}/ovirt-guest-agent/CredServer.py*
 # systemd service
-# %{_unitdir}/ovirt-guest-agent.service
+%{_unitdir}/ovirt-guest-agent.service
 
 %changelog
 * Tue Jul 01 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.10-1
-- Update to upstream 1.0.10 release
+- Update to upstream 1.0.10 version
 
-* Wed Jun 18 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.9-2
-- sudoers: fix path to ovirt-shutdown-wrappers.sh
-
-* Tue Apr 01 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.9-1
-- Update to upstream 1.0.9 release
+* Thu Apr 10 2014 Vinzenz Feenstra <evilissimo@redhat.com> - 1.0.9-1
+- Update to upstream 1.0.9 version
 
 * Wed Oct 30 2013 Vinzenz Feenstra <vfeenstr@redhat.com> - 1.0.8-3
 - Updated the application list
